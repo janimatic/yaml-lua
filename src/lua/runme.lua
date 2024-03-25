@@ -20,30 +20,63 @@ else
 end
 
 yaml = yaml_lua.yaml()
-config = yaml:load("config.yaml")
-configMap = yaml:asMap(config)
---[[
----
-  pid: '/home/www/pids/thin.pid'
-  wait: 30
-  port: 3000
-  timeout: 15
-  servers: 2
-  require: []
-  dbg-mode: false
-]]--
-
-print ("--- config: ")
-print ("pid: " .. configMap["pid"])
-print ("wait: " .. configMap["wait"])
-print ("port: " .. configMap["port"])
-print ("timeout: " .. configMap["timeout"])
-print ("servers: " .. configMap["servers"])
-print ("require: " .. configMap["require"])
-print ("dbg-mode: " .. configMap["dbg-mode"])
 
 
-cookeLens = yaml:load("cooke-lens.yaml")
-cookeLensMap = yaml:asMap(cookeLens)
-print ("--- cooke-lens: ")
-print ("RecordType: " .. cookeLensMap["RecordType"])
+local function testCase(test)
+    if test == 0 then
+        print("----------------------------------------------")
+        print("handling simple files: ")
+        config = yaml:load("config.yaml")
+        configMap = yaml:asMap(config)
+        print ("--- config: ")
+        print ("pid: " .. configMap["pid"])
+        print ("wait: " .. configMap["wait"])
+        print ("port: " .. configMap["port"])
+        print ("timeout: " .. configMap["timeout"])
+        print ("servers: " .. configMap["servers"])
+        print ("require: " .. configMap["require"])
+        print ("dbg-mode: " .. configMap["dbg-mode"])
+        print("\n\n")
+
+    elseif test == 1 then
+        print("----------------------------------------------")
+        print("-- handling files containing multiple documents: ")
+        print ("--- cooke-lens 0: ")
+        cookeLens = yaml:load("cooke-lens.yaml")
+        cookeLensMap = yaml:asMap(cookeLens)
+        print ("RecordType: " .. cookeLensMap["RecordType"])
+
+        print ("--- cooke-lens 1: ")
+        cookeLens = yaml:load("cooke-lens.yaml", 1)
+        cookeLensMap = yaml:asMap(cookeLens)
+        print ("RecordType: " .. cookeLensMap["RecordType"])
+        print("\n\n")
+        
+    elseif test == 2 then
+        print("----------------------------------------------")
+        print("-- looping through multiple documents in a file: ")
+        for i = 0, yaml:getNumberOfDocuments("cooke-lens.yaml") - 1 do
+            cookeLens = yaml:load("cooke-lens.yaml", i)
+            cookeLensMap = yaml:asMap(cookeLens)
+            print ("RecordType "  .. tostring(i) .. " : " .. cookeLensMap["RecordType"])
+        end
+        print("\n\n")
+        
+    elseif test == 3 then
+        print("----------------------------------------------")
+        print("-- dumping file content: ")
+        yaml:dumpFile("cooke-lens.yaml")
+        
+    end
+    
+end
+
+testCase(0)
+testCase(1)
+testCase(2)
+testCase(3)
+
+-- cleanup
+yaml=nil
+collectgarbage()
+print "Goodbye yaml!"

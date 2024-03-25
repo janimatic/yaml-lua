@@ -25,47 +25,72 @@
 #include "yaml-cpp/yaml.h"
 #include <string>
 #include <iostream>
+#include <fstream>
 
 
 class yaml {
 private:
+	//int verbosity = 1;
 	int verbosity = 0;
 	YAML::Node root;
 	std::vector<YAML::Node> nodesVec;
 	std::map<std::string, YAML::Node> nodesMap;
+	int documentCount;
+
 public:
-	YAML::Node load(std::string file) {
-		root = YAML::LoadFile(file);
+
+	int getNumberOfDocuments(std::string file) {
+		std::ifstream infile(file);
+		std::string line;
+		int result = 0;
+		if (infile.is_open())
+		{
+			while (getline(infile, line))
+			{
+				if (line == "---")
+					result++;
+			}
+			infile.close();
+		}
+		return result;
+	}
+
+	YAML::Node load(std::string file, int document = 0) {
+		documentCount = getNumberOfDocuments(file);
+		if (document > documentCount) {
+			std::cerr << "YAML::Node load:  document " << document << " exceed the number of documents " << documentCount << "found in yaml file " << file << std::endl;
+		}
+		if (verbosity) std::cout << "YAML::Node load document " << document << "/" << documentCount << std::endl;
+		root = YAML::LoadAllFromFile(file)[document];
 		return root;
 	}
-	// I failed to write a swig typemap translating std::map<std::string, YAML::Node> to lua.
-	//std::map<std::string, YAML::Node> asMap(YAML::Node node) {
-	//	std::map<std::string, YAML::Node> result;
-	//	for (auto kv : node) {
-	//		const auto& key_node = kv.first;
-	//		const auto& value_node = kv.second;
-	//		std::string key = key_node.as<std::string>();
-	//		result[key] = value_node;
-	//	}
-	//	return result;
-	//}
-	// Simplified map using strings...
-	std::map<std::string, std::string> asMap(YAML::Node node) {
+
+	std::map<std::string, std::string> asMap(YAML::Node node, std::string parent= "") {
 		std::map<std::string, std::string> result;
 		std::vector<YAML::Node> tmpVec;
 		std::string tmpString;
 		std::stringstream tmpSs;
 		std::map<std::string, std::string> tmpMap;
+		std::string path;
+		std::string key;
+		YAML::Node key_node;
+		YAML::Node value_node;
 		for (auto kv : node) {
-			const auto& key_node = kv.first;
-			const auto& value_node = kv.second;
-			std::string key = key_node.as<std::string>();
-			if (verbosity) std::cout << "asStrMap key: " << key << std::endl;
+			key_node = kv.first;
+			value_node = kv.second;
+			key = key_node.as<std::string>();
+			if(parent.empty())
+				path = key;
+			else
+				path = parent + "." + key;
+			if (verbosity) std::cout << "asMap key: " << key << std::endl;
+			if (verbosity) std::cout << "asMap path: " << path << std::endl;
+			key = path;
 			switch (value_node.Type()) {
 				case YAML::NodeType::Scalar:
 					tmpString = value_node.as< std::string >();
 					result[key] = tmpString;
-					if(verbosity) std::cout << "asStrMap kv Scalar: " << result[key] << std::endl;
+					if(verbosity) std::cout << "asMap kv Scalar: " << result[key] << std::endl;
 					break;
 				case YAML::NodeType::Sequence:
 					tmpSs.clear();
@@ -77,26 +102,28 @@ public:
 						result[key] = tmpSs.str();
 					else
 						result[key] = "";
-					if (verbosity) std::cout << "asStrMap kv Sequence: " << result[key] << std::endl;
+					if (verbosity) std::cout << "asMap kv Sequence: " << result[key] << std::endl;
 					break;
 				case YAML::NodeType::Map:
-					if (verbosity) std::cout << "asStrMap value_node.Type() Map: " << value_node.Type() << std::endl;
-					tmpMap = asMap(value_node);
+					if (verbosity) std::cout << "asMap value_node.Type() Map: " << value_node.Type() << std::endl;
+					//tmpMap = asMap(value_node, key);
+					tmpMap = asMap(value_node, path);
 					result.insert(tmpMap.begin(), tmpMap.end());
 					break;
 				case YAML::NodeType::Null:
-					if (verbosity) std::cout << "asStrMap value_node.Type() Null: " << value_node.Type() << std::endl;
+					if (verbosity) std::cout << "asMap value_node.Type() Null: " << value_node.Type() << std::endl;
 					break;
 				case YAML::NodeType::Undefined:
-					if (verbosity) std::cout << "asStrMap value_node.Type() Undefined: " << value_node.Type() << std::endl;
+					if (verbosity) std::cout << "asMap value_node.Type() Undefined: " << value_node.Type() << std::endl;
 					break;
 				default:
-					if (verbosity) std::cout << "asStrMap value_node.Type() unknown: " << value_node.Type() << std::endl;
+					if (verbosity) std::cout << "asMap value_node.Type() unknown: " << value_node.Type() << std::endl;
 					break;
 			}
 		}
 		return result;
 	}
+
 	std::vector<YAML::Node> asSequence(YAML::Node node) {
 		std::vector<YAML::Node> result;
 		for (auto it = node.begin(); it != node.end(); ++it) {
@@ -105,10 +132,44 @@ public:
 		}
 		return result;
 	}
+
 	std::string asString(YAML::Node node) {
 		return node.as<std::string>();
 	}
+
 	std::string asScalar(YAML::Node node) {
 		return node.as<std::string>();
 	}
+
+	void dumpFile(std::string file) {
+		int docs = getNumberOfDocuments(file);
+		int indent = 0;
+		for (int d = 0; d < docs; d++) {
+			std::cout << std::string(indent, '\t') << "dumpFile: " << file << " doc: " << d << std::endl;
+			auto root = load(file, d);
+			dumpNode(root, indent);
+		}
+	}
+
+	void dumpNode(YAML::Node node, int indent = 0) {
+		std::string key;
+		YAML::Node key_node;
+		YAML::Node value_node;
+		if (node.IsMap()) {
+			indent += 1;
+			for (auto kv : node) {
+				key_node = kv.first;
+				std::cout << std::string(indent, '\t') << "map: " << key_node.as<std::string>() << std::endl;
+				dumpNode(kv.second, indent);
+			}
+		}
+		else if (node.IsSequence()) {
+			indent += 1;
+			for (auto v : asSequence(node)) dumpNode(v, indent);
+		}
+		else if (node.IsScalar()) {
+			std::cout << std::string(indent, '\t') << "scalar: " << node.as< std::string >() << std::endl;
+		}
+	}
+
 };
