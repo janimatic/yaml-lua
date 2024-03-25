@@ -4,11 +4,11 @@
 ---- importing ----
 if string.sub(_VERSION,1,7)=='Lua 5.0' then
 	-- lua5.0 doesn't have a nice way to do this
-	lib=loadlib('yaml-lua.dll','luaopen_example') or loadlib('yaml-lua.so','luaopen_example')
+	lib=loadlib('yaml_lua.dll','luaopen_example') or loadlib('yaml_lua.so','luaopen_example')
 	assert(lib)()
 else
 	-- lua 5.1 does
-	require('yaml-lua')
+	require('yaml_lua')
 end
 
 --[[
@@ -23,3 +23,76 @@ Check this simple yaml-cpp wrapper from an openframeworks addon
 https://github.com/michaelbaisch/ofxYAML/blob/master/src/ofxYAML.h
 ]]--
 
+
+print(yaml_lua)
+m=getmetatable(yaml_lua)
+table.foreach(m,print)
+g=m['.get']
+table.foreach(g,print)
+g=m['.set']
+table.foreach(g,print)
+
+print(yaml_lua)
+
+print(yaml_lua.Node)
+
+-- yaml_lua.Node config = yaml_lua.LoadFile()
+-- if (config["pid"]) then
+    -- print (config["pid"])
+-- end
+-- config = yaml_lua.LoadFile("config.yaml")
+
+-- config = yaml_lua.Node
+config = yaml_lua.LoadFile("config.yaml")
+print(config) -- <userdata of type 'YAML::Node *' at 00000000005B9810>
+m=getmetatable(config)
+table.foreach(m,print)
+g=m['.get']
+table.foreach(g,print)
+g=m['.set']
+table.foreach(g,print)
+
+-- if config["pid"] then
+  --print( "Last logged in: " .. config["pid"].as<DateTime>() );
+  -- print( "Last logged in: " .. config["pid"] );
+-- end
+
+-- bad argument #1 to 'pairs' (table expected, got userdata)
+-- for k, v in pairs(config) do
+    -- if(tool ~= nil) then
+        -- print(k .. v)
+    -- end
+-- end
+
+-- convert it to a lua table ? https://stackoverflow.com/questions/13326412/add-members-dynamically-to-a-class-using-lua-swig
+-- local function WrapObject(cppObject)
+    -- local proxy = {}
+    -- local wrapper_metatable = {}
+
+-- function wrapper_metatable.__index(self, key)
+    -- local ret = rawget(self, key)
+    -- if(not ret) then
+        -- ret = cppObject[key]
+        -- if(type(ret) == "function") then
+            -- return function(self, ...)
+                -- return ret(cppObject, ...)
+            -- end
+        -- else
+            -- return ret
+        -- end
+    -- else
+        -- return ret
+    -- end
+-- end
+
+
+-- setmetatable(proxy, wrapper_metatable)
+    -- return proxy
+-- end
+
+-- wobj = WrapObject(config)
+-- for k, v in pairs(wobj) do
+    -- if(tool ~= nil) then
+        -- print(k .. v)
+    -- end
+-- end
