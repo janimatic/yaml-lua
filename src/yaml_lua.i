@@ -18,6 +18,7 @@ TODO :
 %module yaml_lua
 
 %{
+#include "yaml_lua/yaml_lua.h"
 #include "yaml-cpp/anchor.h"
 #include "yaml-cpp/binary.h"
 #include "yaml-cpp/depthguard.h"
@@ -93,12 +94,124 @@ using EMITTER_MANIP = YAML::EMITTER_MANIP;
 //	%template(someLuaType) someCppType;
 //}
 
+%include stl.i
+namespace std {
+    %template(nodeMap) map<std::string,  YAML::Node>;
+    %template(stringMap) map<std::string, std::string>;
+}
+
+%include "std_string.i"
+%include "std_vector.i"
+%include "std_map.i"
+/*
+ * Defining a typemap for std::map< std::string, std::string >
+ */
+
+%typemap(in) std::map< std::string, std::string >, const std::map< std::string, std::string > & (std::map< std::string, std::string > aux)
+{
+  lua_pushnil(L);
+  
+  while(lua_next(L, -2) != 0)
+  {
+    if(lua_isstring(L, -1) && lua_isstring(L, -2))
+    {
+      std::string key(lua_tostring(L, -2)), 
+                  value(lua_tostring(L, -1)); 
+      
+      aux[key] = value;
+    }
+    
+    lua_pop(L, 1);
+  }
+  
+  $1 = &aux;
+}
+
+%typemap(out) const std::map< std::string, std::string >&
+{
+  lua_newtable(L);
+  
+  std::map<std::string, std::string>::const_iterator it;
+    
+  for(it = $result->begin(); it != $result->end(); ++it)
+  {
+    const char* key = it->first.c_str();
+    const char* value = it->second.c_str();
+    
+    lua_pushstring(L, key);
+    lua_pushstring(L, value);
+    lua_settable(L, -3);
+  }
+  
+  return 1;
+}
+
+%typemap(out) std::map< std::string, std::string >
+{
+  lua_newtable(L);
+  
+  std::map<std::string, std::string>::const_iterator it;
+    
+  for(it = $result.begin(); it != $result.end(); ++it)
+  {
+    const char* key = it->first.c_str();
+    const char* value = it->second.c_str();
+    
+    lua_pushstring(L, key);
+    lua_pushstring(L, value);
+    lua_settable(L, -3);
+  }
+  
+  return 1;
+}
+
+%typemap(out) std::map< std::string, std::string >&
+{
+  lua_newtable(L);
+  
+  std::map<std::string, std::string>::const_iterator it;
+    
+  for(it = $result->begin(); it != $result->end(); ++it)
+  {
+    const char* key = it->first.c_str();
+    const char* value = it->second.c_str();
+    
+    lua_pushstring(L, key);
+    lua_pushstring(L, value);
+    lua_settable(L, -3);
+  }
+  
+  return 1;
+}
+
+/*
+void PushTable(lua_State*L, std::map<std::string,std::string> dongs)
+{
+	lua_newtable(L);
+	std::map<std::string,std::string>::iterator it=dongs.begin();
+	for(it;it!=dongs.end();it++)
+	{
+		//key
+		lua_pushlstring(L,(&it->first)->data(),(&it->first)->size());
+
+		//value
+		lua_pushlstring(L,(&it->second)->data(),(&it->second)->size());
+
+		// set the table entry
+		lua_settable(L, -3);
+	}
+    // push the new table
+    lua_pushvalue(L,-1);
+}
+*/
+
 // error LNK2019: symbole externe non résolu "bool __cdecl YAML::IsNull(class YAML::Node const &)" (?IsNull@YAML@@YA_NAEBVNode@1@@Z) référencé dans la fonction _wrap_IsNull
 // see yaml-cpp/null.h  IsNull // old API only
 %{
      bool YAML::IsNull(const Node& node){return false;}
 %}
 
+%include "yaml_lua/yaml_lua.h"
 %include "yaml-cpp/anchor.h"
 %include "yaml-cpp/binary.h"
 // %include "yaml-cpp/depthguard.h" // yaml_luaLUA_wrap.cxx(3661,5): error C2065: 'Mark' : identificateur non déclaré

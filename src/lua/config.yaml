@@ -5,4 +5,5 @@
   timeout: 15
   servers: 2
   require: []
+  require2: ['someVecValue']
   dbg-mode: false

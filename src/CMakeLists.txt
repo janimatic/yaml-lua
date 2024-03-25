@@ -47,6 +47,16 @@ endif()
 
 target_link_libraries(yaml_lua PUBLIC yaml-cpp::yaml-cpp) # The library or executable that require yaml-cpp library
 
+file(GLOB yaml_lua_HEADERS
+        yaml_lua/*.h
+        )
+file(GLOB yaml_lua_SRCS
+        yaml_lua/*.cpp
+        )
+target_sources( yaml_lua PRIVATE 
+    ${yaml_lua_HEADERS} ${yaml_lua_SRCS} 
+)
+
 # copy our dll next to our lua source
 set(LUA_SRC ${PROJECT_SOURCE_DIR}/lua)
 add_custom_command(TARGET yaml_lua POST_BUILD
